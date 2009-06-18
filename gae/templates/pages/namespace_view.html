@@ -22,6 +22,12 @@
                     <th>Authorisation Key</th>
                     <td>{{ namespace.auth_key }}</td>
                 </tr>
+                <tr>
+                    <th>REST API</th>
+                    <td>
+                        <a href="/rest/message/find/{{ namespace.name }}/{{ namespace.auth_key }}/*/0" target="_blank">Find All Messages</a><br/>
+                    </td>
+                </tr>
             {% endif %}
             <tr>
                 <th>Created</th>

@@ -344,6 +344,7 @@ class MessageRestFindHandler(BaseRequestHandler):
                     query.filter("name =", name)
                 if minutes > 0:
                     query.filter("created >=", earliest_datestamp)
+                query.order("-created")
                 messages = query.fetch(1000)
             else:
                 errors.append("Namespace: not authorised")

@@ -3,12 +3,32 @@
 {% block body %}
     <h2>Messages</h2>
     <p><a href="/message/create">Create</a></p>
-    <ul>
+    <table>
+        <thead>
+            <tr>
+                <th>Key</th>
+                <th>Namespace</th>
+                <th>Name</th>
+                <th>Level</th>
+                <th>Body</th>
+                <th>Created</th>
+            </tr>
+        </thead>
+        <tbody>
         {% for item in items %}
-            <li><a href="/message/view/{{ item.key }}">{{ item.namespace }} &gt; {{ item.name }}: {{ item.body }}</a></li>
+            <tr>
+                <td><a href="/message/view/{{ item.key }}" title="{{ item.key }}">View</a></td>
+                <td>{{ item.namespace }}</td>
+                <td>{{ item.name }}</td>
+                <td>{{ item.level_string|upper }}</td>
+                <td>{{ item.body }}</td>
+                <td>{{ item.created|date:"d/m/Y H:i:s" }}</td>
+            </tr>
         {% endfor %}
-    </ul>
+        </tbody>
+    </table>
     {% if has_previous %}<a href="?page={{ previous }}">Prev</a>{% endif %}
     {% if has_next %}<a href="?page={{ next }}">Next</a>{% endif %}
+
 {% endblock %}
 

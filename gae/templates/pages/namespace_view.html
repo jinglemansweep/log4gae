@@ -1,24 +1,38 @@
 {% extends "../base.html" %}
 
-{% block body_attributes %}class="yui-skin-sam"{% endblock %}
-
-{% block javascript %}{% endblock %}
-
-{% block javascript_jquery %}{% endblock %}
-
-{% block javascript_templates %}{% endblock %}
-
 {% block body %}
 
-    <h2>Namespace: {{ namespace.name }}</h2>
-    <p>Owned by: <strong>{{ namespace.owner }}</strong></p>
-
-    {% if owner %}
-        <h3>Administration</h3>
-        <p>Auth Key: <strong>{{ namespace.auth_key }}</strong></p>
-    {% endif %}
+    <h2>View Namespace</h2>
+    <table>
+        <tbody>
+            <tr>
+                <th>Key</th>
+                <td>{{ namespace.key }}</td>
+            </tr>
+            <tr>
+                <th>Name</th>
+                <td>{{ namespace.name }}</td>
+            </tr>
+            <tr>
+                <th>Owner</th>
+                <td>{{ namespace.owner }}</td>
+            </tr>
+            {% if owner %}
+                <tr>
+                    <th>Authorisation Key</th>
+                    <td>{{ namespace.auth_key }}</td>
+                </tr>
+            {% endif %}
+            <tr>
+                <th>Created</th>
+                <td>{{ namespace.created|date:"d M Y H:i:s" }}</td>
+            </tr>
+            <tr>
+                <th>Modified</th>
+                <td>{{ namespace.modified|date:"d M Y H:i:s" }}</td>
+            </tr>
+        </tbody>
+    </table>
 
 {% endblock %}
 
-{% block sidebar %}
-{% endblock %}

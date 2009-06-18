@@ -74,6 +74,14 @@ class Message(db.Model):
     created = db.DateTimeProperty(auto_now_add=True)
     modified = db.DateTimeProperty(auto_now=True)
 
+    def level_string(self):
+        if self.level == 10: return "debug"
+        if self.level == 20: return "info"
+        if self.level == 30: return "warn"
+        if self.level == 40: return "error"
+        if self.level == 50: return "fatal"
+        return "Unknown (%i)" % (self.level)
+
 
 # =[ FORMS ]====================================================================
 
@@ -252,7 +260,7 @@ class MessageListHandler(BaseRequestHandler):
 
     def get(self):   
 
-        query = db.GqlQuery("SELECT * FROM Message WHERE namespace_owner = :1", users.get_current_user())
+        query = db.GqlQuery("SELECT * FROM Message WHERE namespace_owner = :1 ORDER BY created DESC", users.get_current_user())
         messages = query.fetch(1000)
         paginate_by = 10
         paginator = ObjectPaginator(messages, paginate_by) 
@@ -310,7 +318,30 @@ class MessageRestListHandler(BaseRequestHandler):
 
         if namespace:
             if namespace.auth_key == auth_key:
-                query = db.GqlQuery("SELECT * FROM Message WHERE namespace = :1", namespace.key()) 
+                query = db.GqlQuery("SELECT * FROM Message WHERE namespace = :1 ORDER BY created DESC", namespace.key()) 
+                messages = query.fetch(100)
+            else:
+                errors.append("Namespace: not authorised")
+        else:           
+            errors.append("Namespace: not found")
+
+        self.generate("rest/message_list.xml", {"messages": messages}) 
+
+
+class MessageRestListRecentHandler(BaseRequestHandler):
+
+    def get(self, namespace, auth_key, minutes):
+
+        errors = []
+        messages = []
+        query = db.GqlQuery("SELECT * FROM Namespace WHERE name = :1", namespace)
+        namespace = query.get()
+
+        now = datetime.datetime.now() - datetime.timedelta(minutes=int(minutes))
+
+        if namespace:
+            if namespace.auth_key == auth_key:
+                query = db.GqlQuery("SELECT * FROM Message WHERE namespace = :1 AND created >= :2 ORDER BY created DESC", namespace.key(), now) 
                 messages = query.fetch(100)
             else:
                 errors.append("Namespace: not authorised")
@@ -395,6 +426,7 @@ url_map = [
     (r'/message/view/(.*)', MessageViewHandler),
     (r'/message/create', MessageCreateHandler),
     (r'/message/rest/list/(.*)/(.*)', MessageRestListHandler),
+    (r'/message/rest/recent/(.*)/(.*)/(.*)', MessageRestListRecentHandler),
     (r'/message/rest/create', MessageRestCreateHandler),
     (r'/(.*)', PageHandler),
 ]

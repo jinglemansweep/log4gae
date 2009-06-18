@@ -331,9 +331,10 @@ class MessageRestCreateHandler(BaseRequestHandler):
             namespace_name = post["namespace"].lower()
             query = db.GqlQuery("SELECT * FROM Namespace WHERE name = :1", namespace_name)
             namespace = query.get()
-            namespace_owner = namespace.owner
             if not namespace:
                 errors.append("Namespace: not found")
+            else:
+                namespace_owner = namespace.owner
         else:
             errors.append("Namespace: not specified")
 

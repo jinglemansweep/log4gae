@@ -1,0 +1,81 @@
+#!/usr/bin/env python
+
+from optparse import OptionParser
+from datetime import datetime
+from xml.dom import minidom
+import logging
+import urllib
+import urllib2
+import pprint
+
+logger = logging.getLogger("log4gae")
+logger.setLevel(logging.DEBUG)
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+ch.setFormatter(formatter)
+logger.addHandler(ch)
+
+pp = pprint.PrettyPrinter(indent=4)
+
+DEFAULT_HOST = "log4gae.appspot.com"
+
+print "Log4GAE HTTP Post Client (jinglemansweep@gmail.com)"
+print ""
+
+parser = OptionParser()
+parser.add_option("-s", "--namespace", dest="namespace", help="Specify namespace to use")
+parser.add_option("-n", "--name", dest="name", help="Specify name to use")
+parser.add_option("-l", "--level", dest="level", default="info", help="Specify level to use")
+parser.add_option("-a", "--auth-key", dest="auth_key", help="Specify authorisation key to use")
+parser.add_option("-b", "--body", dest="body", help="Specify body to use")
+parser.add_option("-d", "--host", dest="host", default=DEFAULT_HOST, help="Specify Log4GAE host to use")
+
+(options, args) = parser.parse_args()
+
+
+post_url = "http://%s/message/rest/create" % (options.host)
+
+error_count = 0
+
+if not options.namespace:
+    logger.error("Namespace not specified")
+    error_count = error_count + 1
+if not options.name:
+    logger.error("Name not specified")
+    error_count = error_count + 1
+if not options.auth_key:
+    logger.error("Authorisation Key not specified")
+    error_count = error_count + 1
+if not options.body:
+    logger.error("Body not specified")
+    error_count = error_count + 1
+
+if error_count > 0:
+    print "Cannot proceed. %i errors." % (error_count)
+    print ""
+    exit(1)
+
+# HTTP
+
+print "Posting to: %s" % (post_url)
+
+
+post_values = {
+    "namespace": options.namespace,
+    "name": options.name,
+    "level": options.level,
+    "auth_key": options.auth_key,
+    "body": options.body,
+}
+
+post_data = urllib.urlencode(post_values)
+request = urllib2.Request(post_url, post_data)
+response = urllib2.urlopen(request)
+xml = response.read()
+result = minidom.parseString(xml)
+
+print result.toprettyxml()
+
+
+

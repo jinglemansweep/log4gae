@@ -20,7 +20,7 @@
             {% if owner %}
                 <tr>
                     <th>Authorisation Key</th>
-                    <td>{{ namespace.auth_key }}</td>
+                    <td>{{ namespace.auth_key }}<br/><a href="/namespace/auth_reset/{{ namespace.key }}">Reset Key</a></td>
                 </tr>
                 <tr>
                     <th>REST API</th>

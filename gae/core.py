@@ -190,7 +190,6 @@ class BaseRequestHandler(webapp.RequestHandler):
 class PageHandler(BaseRequestHandler):
 
 
-    @login_required
     def get(self, page):
 
         if not page: page = "homepage"
@@ -202,6 +201,7 @@ class PageHandler(BaseRequestHandler):
 
 class NamespaceCreateHandler(BaseRequestHandler):
 
+    @login_required
     def get(self):   
 
         form = NamespaceCreateForm()
@@ -222,8 +222,24 @@ class NamespaceCreateHandler(BaseRequestHandler):
             self.generate("pages/namespace_create.html", {"form": form}) 
 
 
+class NamespaceAuthResetHandler(BaseRequestHandler):
+
+    @login_required
+    def get(self, key):   
+
+        namespace = db.get(key)
+        if namespace.owner == users.get_current_user():
+            namespace.auth_key = namespace.generate_auth_key()
+            namespace.put()
+            memcache.set("namespace_item_%s" % (namespace.key()), namespace, (60*60))
+            
+
+        self.redirect("/namespace/view/%s" % (namespace.key()))
+
+
 class NamespaceListHandler(BaseRequestHandler):
 
+    @login_required
     def get(self):   
 
         namespaces = memcache.get("namespace_list")
@@ -258,6 +274,7 @@ class NamespaceListHandler(BaseRequestHandler):
 
 class NamespaceViewHandler(BaseRequestHandler):
 
+    @login_required
     def get(self, key):   
 
         namespace = memcache.get("namespace_item_%s" % (key))
@@ -276,6 +293,7 @@ class NamespaceViewHandler(BaseRequestHandler):
 
 class MessageListHandler(BaseRequestHandler):
 
+    @login_required
     def get(self):   
 
         messages = memcache.get("message_list")
@@ -311,6 +329,7 @@ class MessageListHandler(BaseRequestHandler):
 
 class MessageRestFindHandler(BaseRequestHandler):
 
+
     def get(self, namespace_name, auth_key, name, level, minutes, record_limit):
 
         try:
@@ -341,7 +360,7 @@ class MessageRestFindHandler(BaseRequestHandler):
         if not namespace:        
             query = db.GqlQuery("SELECT * FROM Namespace WHERE name = :1", namespace_name)
             namespace = query.get()
-            memcache.set("namespace_item_%s" % (namespace_name), namespace, (60*60))
+            memcache.set("namespace_item_%s" % (namespace.key()), namespace, (60*60))
 
         if namespace:
             if namespace.auth_key == auth_key:
@@ -424,6 +443,7 @@ class MessageRestCreateHandler(BaseRequestHandler):
 
 class MessageViewHandler(BaseRequestHandler):
 
+    @login_required
     def get(self, key):   
 
         message = memcache.get("message_item_%s" % (key))
@@ -442,6 +462,7 @@ url_map = [
     (r'/namespace/list', NamespaceListHandler),
     (r'/namespace/view/(.*)', NamespaceViewHandler),
     (r'/namespace/create', NamespaceCreateHandler),
+    (r'/namespace/auth_reset/(.*)', NamespaceAuthResetHandler),
     (r'/message/list', MessageListHandler),
     (r'/message/view/(.*)', MessageViewHandler),
     (r'/rest/message/find/(.*)/(.*)/(.*)/(.*)/(.*)/(.*)', MessageRestFindHandler),

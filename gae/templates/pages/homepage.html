@@ -1,6 +1,13 @@
 {% extends "../base.html" %}
 
 {% block body %}
+<h1>Log4GAE</h1>
+<p><strong>Logger for Google App Engine</strong> is a simple REST based service used solely for logging purposes. All messages are posted to private namespaces using an authorisation key using an HTTP REST API.</p>
+<p>Log messages include standard severity levels (Debug, Info, Warn, etc.) and a custom identifier (e.g. source).</p>
+<h2>Getting Started</h2>
+<p>Before you can post, you will need to <a href="/namespace/create">register a namespace or two</a>. Once you have done that, note down the authorisation key for each namespace. You will need to include this in your request for security reasons.</p>
+<p>You may want to use a REST client to play around with the API such as <a href="http://code.google.com/p/rest-client/" target="_blank">RESTClient</a>.
+<p>Refer to the <a href="http://wiki.github.com/jingleman/log4gae/usage" target="_blank">Log4GAE Wiki</a> for further documentation.</p>
 {% endblock %}
 
 {% block sidebar %}

@@ -34,7 +34,7 @@ parser.add_option("-d", "--host", dest="host", default=DEFAULT_HOST, help="Speci
 (options, args) = parser.parse_args()
 
 
-post_url = "http://%s/message/rest/create" % (options.host)
+post_url = "http://%s/rest/message/create" % (options.host)
 
 error_count = 0
 

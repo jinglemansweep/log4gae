@@ -8,6 +8,7 @@ import random
 import string
 import sys
 
+from types import IntType, LongType, FloatType
 from google.appengine.api import users
 from google.appengine.ext import db
 from google.appengine.ext import webapp
@@ -43,6 +44,13 @@ LEVELS["error"] = 40
 LEVELS["fatal"] = 50
 
 
+# =[ FUNCTIONS ]================================================================
+
+
+def is_number(n):
+    return n in (IntType, LongType, FloatType)
+
+
 # =[ MODELS ]===================================================================
 
 
@@ -61,6 +69,9 @@ class Namespace(db.Model):
 
     def __str__(self):
         return "%s" % (self.name)
+
+    def generate_auth_key(self, size=64):
+        return ''.join([random.choice(string.letters + string.digits) for i in range(size)])
 
 
 class Message(db.Model):
@@ -238,7 +249,7 @@ class NamespaceCreateHandler(BaseRequestHandler):
         if form.is_valid():
             entity = form.save(commit=False)
             entity.owner = users.get_current_user()
-            entity.auth_key = generate_auth_key()
+            entity.auth_key = entity.generate_auth_key()
             entity.put()
             self.redirect("/namespace/view/%s" % (entity.key()))
         else:
@@ -307,9 +318,18 @@ class MessageCreateHandler(BaseRequestHandler):
             self.generate("pages/message_create.html", {"form": form}) 
 
 
-class MessageRestListHandler(BaseRequestHandler):
+class MessageRestFindHandler(BaseRequestHandler):
 
-    def get(self, namespace, auth_key):
+    def get(self, namespace, auth_key, name, minutes):
+
+        try:
+            minutes = int(minutes)
+        except ValueError:
+            minutes = 60
+        
+        logging.info(name)
+
+        earliest_datestamp = datetime.datetime.now() - datetime.timedelta(minutes=int(minutes))
 
         errors = []
         messages = []
@@ -318,31 +338,13 @@ class MessageRestListHandler(BaseRequestHandler):
 
         if namespace:
             if namespace.auth_key == auth_key:
-                query = db.GqlQuery("SELECT * FROM Message WHERE namespace = :1 ORDER BY created DESC", namespace.key()) 
-                messages = query.fetch(100)
-            else:
-                errors.append("Namespace: not authorised")
-        else:           
-            errors.append("Namespace: not found")
-
-        self.generate("rest/message_list.xml", {"messages": messages}) 
-
-
-class MessageRestListRecentHandler(BaseRequestHandler):
-
-    def get(self, namespace, auth_key, minutes):
-
-        errors = []
-        messages = []
-        query = db.GqlQuery("SELECT * FROM Namespace WHERE name = :1", namespace)
-        namespace = query.get()
-
-        now = datetime.datetime.now() - datetime.timedelta(minutes=int(minutes))
-
-        if namespace:
-            if namespace.auth_key == auth_key:
-                query = db.GqlQuery("SELECT * FROM Message WHERE namespace = :1 AND created >= :2 ORDER BY created DESC", namespace.key(), now) 
-                messages = query.fetch(100)
+                query = db.Query(Message)
+                query.filter("namespace =", namespace.key())
+                if name != "%2A":
+                    query.filter("name =", name)
+                if minutes > 0:
+                    query.filter("created >=", earliest_datestamp)
+                messages = query.fetch(1000)
             else:
                 errors.append("Namespace: not authorised")
         else:           
@@ -425,9 +427,8 @@ url_map = [
     (r'/message/list', MessageListHandler),
     (r'/message/view/(.*)', MessageViewHandler),
     (r'/message/create', MessageCreateHandler),
-    (r'/message/rest/list/(.*)/(.*)', MessageRestListHandler),
-    (r'/message/rest/recent/(.*)/(.*)/(.*)', MessageRestListRecentHandler),
-    (r'/message/rest/create', MessageRestCreateHandler),
+    (r'/rest/message/find/(.*)/(.*)/(.*)/(.*)', MessageRestFindHandler),
+    (r'/rest/message/create', MessageRestCreateHandler),
     (r'/(.*)', PageHandler),
 ]
 
@@ -448,8 +449,4 @@ if __name__ == "__main__":
     main()
 
 
-# =[ Helper Functions ]=========================================================
-
-def generate_auth_key(size=64):
-    return ''.join([random.choice(string.letters + string.digits) for i in range(size)])
 

@@ -1,0 +1,15 @@
+{% extends "../base.html" %}
+
+{% block body %}
+
+    <h2>Create New Namespace...</h2>
+    <form id="form_namespace" action="" method="post" class="form">
+        <label for="id_name">Name:</label><br/>
+        {{ form.name }}<br/>       
+        {{ form.name.errors }}
+        <hr/>
+        <input type="submit" value="Save" /><br/>
+    </form>
+
+{% endblock %}
+

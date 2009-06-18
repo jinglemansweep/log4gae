@@ -1,0 +1,13 @@
+<log4gae>
+  <messages>
+    {% for message in messages %}
+      <message key="{{ message.key }}" namespace="{{ message.namespace }}" name="{{ message.name }}" level="{{ message.level }}">
+        {{ message.body }}
+      </message>
+    {% endfor %}
+  </messages>
+</log4gae>
+   
+
+
+

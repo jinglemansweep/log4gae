@@ -1,0 +1,22 @@
+{% extends "../base.html" %}
+
+{% block body_attributes %}class="yui-skin-sam"{% endblock %}
+
+{% block javascript %}{% endblock %}
+
+{% block javascript_jquery %}{% endblock %}
+
+{% block body %}
+    <h2>Namespaces</h2>
+    <p><a href="/namespace/create">Create</a></p>
+    <ul>
+        {% for item in items %}
+            <li><a href="/namespace/view/{{ item.key }}">{{ item.name }}</a></li>
+        {% endfor %}
+    </ul>
+    {% if has_previous %}<a href="?page={{ previous }}">Prev</a>{% endif %}
+    {% if has_next %}<a href="?page={{ next }}">Next</a>{% endif %}
+{% endblock %}
+
+{% block sidebar %}
+{% endblock %}

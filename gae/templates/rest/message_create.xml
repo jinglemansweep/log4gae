@@ -1,0 +1,5 @@
+<log4gae><message><result>{% if success %}success{% else %}failed{% endif %}</result>{% if errors %}<errors>{% for error in errors %}<error>{{ error }}</error>{% endfor %}</errors>{% endif %}</message></log4gae>
+   
+
+
+

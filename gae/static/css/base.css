@@ -1,0 +1,68 @@
+/* FORMS */
+
+form.form label {
+    font-weight: bold;
+    font-size: 8pt;
+}
+
+form.form input[type='text'] {
+
+}
+
+/* HEADER */
+
+div.title {
+    float: left;
+}
+
+div.login {
+    float: right;
+}
+
+ul.nav_menu {
+    padding: 0;
+    margin: 0;
+}
+
+ul.nav_menu li {
+    list-style: none;
+    display: inline;
+}
+
+/* TAGGING */
+
+span.tagMatches {
+    margin-left: 10px;
+}
+
+span.tagMatches span {
+    padding: 2px;
+    margin-right: 4px;
+    background-color: #0000AB;
+    color: #fff;
+    cursor: pointer;
+}
+
+/* FLASH */
+
+div#flash ul {
+    padding: 5px 0 5px 0;
+    margin: 0;
+    width: 100%;
+}
+
+div#flash ul li {
+    border: 1px solid #ffcc00;
+    background-color: #ffffcc;
+    padding: 2px 4px 2px 4px;
+    margin-bottom: 2px;
+    font-size: 8pt;
+    list-style: none;
+    width: 100%;
+}
+
+/* WIDGETS */
+
+table#wtp tbody td {
+    padding-right: 10px;
+}

@@ -1,0 +1,24 @@
+{% extends "../base.html" %}
+
+{% block body_attributes %}class="yui-skin-sam"{% endblock %}
+
+{% block javascript %}{% endblock %}
+
+{% block javascript_jquery %}{% endblock %}
+
+{% block javascript_templates %}{% endblock %}
+
+{% block body %}
+
+    <h2>Namespace: {{ namespace.name }}</h2>
+    <p>Owned by: <strong>{{ namespace.owner }}</strong></p>
+
+    {% if owner %}
+        <h3>Administration</h3>
+        <p>Auth Key: <strong>{{ namespace.auth_key }}</strong></p>
+    {% endif %}
+
+{% endblock %}
+
+{% block sidebar %}
+{% endblock %}

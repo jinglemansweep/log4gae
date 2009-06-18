@@ -320,14 +320,17 @@ class MessageCreateHandler(BaseRequestHandler):
 
 class MessageRestFindHandler(BaseRequestHandler):
 
-    def get(self, namespace, auth_key, name, minutes):
+    def get(self, namespace, auth_key, name, level, minutes):
 
         try:
             minutes = int(minutes)
         except ValueError:
             minutes = 60
         
-        logging.info(name)
+        level = level.lower()
+
+        if level not in ["debug", "info", "warn", "error", "fatal", "*"]:
+            level = "%2A"
 
         earliest_datestamp = datetime.datetime.now() - datetime.timedelta(minutes=int(minutes))
 
@@ -342,6 +345,8 @@ class MessageRestFindHandler(BaseRequestHandler):
                 query.filter("namespace =", namespace.key())
                 if name != "%2A":
                     query.filter("name =", name)
+                if level != "%2A":
+                    query.filter("level =", LEVELS[level])
                 if minutes > 0:
                     query.filter("created >=", earliest_datestamp)
                 query.order("-created")
@@ -428,7 +433,7 @@ url_map = [
     (r'/message/list', MessageListHandler),
     (r'/message/view/(.*)', MessageViewHandler),
     (r'/message/create', MessageCreateHandler),
-    (r'/rest/message/find/(.*)/(.*)/(.*)/(.*)', MessageRestFindHandler),
+    (r'/rest/message/find/(.*)/(.*)/(.*)/(.*)/(.*)', MessageRestFindHandler),
     (r'/rest/message/create', MessageRestCreateHandler),
     (r'/(.*)', PageHandler),
 ]

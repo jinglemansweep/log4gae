@@ -9,6 +9,7 @@ import string
 import sys
 
 from types import IntType, LongType, FloatType
+from google.appengine.api import memcache
 from google.appengine.api import users
 from google.appengine.ext import db
 from google.appengine.ext import webapp
@@ -52,11 +53,6 @@ def is_number(n):
 
 
 # =[ MODELS ]===================================================================
-
-
-class UserPrefs(db.Model):
-
-    user = db.UserProperty()
 
 
 class Namespace(db.Model):
@@ -122,7 +118,6 @@ class NamespaceCreateForm(BaseForm):
         return name
 
 
-
 class MessageCreateForm(BaseForm):
     
     class Meta:
@@ -153,6 +148,9 @@ class MessageCreateForm(BaseForm):
 # =[ REQUEST HANDLERS ] ========================================================
 
 
+# Base Handler
+
+
 class BaseRequestHandler(webapp.RequestHandler):
 
     _OUTPUT_TYPES = {
@@ -166,19 +164,11 @@ class BaseRequestHandler(webapp.RequestHandler):
         flash = Flash()
 
         user = users.get_current_user()
-        prefs = None
-        if user:
-            q = db.GqlQuery("SELECT * FROM UserPrefs WHERE user = :1", user)
-            prefs = q.get()
-            if not prefs:
-                prefs = UserPrefs(user=user)
-                prefs.put()
 
         values = {
           "debug": os.getenv("SERVER_SOFTWARE").split("/")[0] == "Development" if os.getenv("SERVER_SOFTWARE") else False,            
           "request": self.request,
           "user": user,
-          "prefs": prefs,
           "login_url": users.create_login_url(self.request.uri),
           "logout_url": users.create_logout_url("http://%s/" % (self.request.host,)),
           "application_name": "Log4GAE",
@@ -194,6 +184,9 @@ class BaseRequestHandler(webapp.RequestHandler):
         self.response.out.write(template.render(path, values, debug=_DEBUG))
 
 
+# Page Handler
+
+
 class PageHandler(BaseRequestHandler):
 
 
@@ -204,12 +197,41 @@ class PageHandler(BaseRequestHandler):
         self.generate("pages/%s.html" % page, {})
 
 
+# Namespace Handlers
+
+
+class NamespaceCreateHandler(BaseRequestHandler):
+
+    def get(self):   
+
+        form = NamespaceCreateForm()
+        options = {"form": form}
+        self.generate("pages/namespace_create.html", options)
+
+    def post(self):
+
+        form = NamespaceCreateForm(data=self.request.POST)
+
+        if form.is_valid():
+            entity = form.save(commit=False)
+            entity.owner = users.get_current_user()
+            entity.auth_key = entity.generate_auth_key()
+            entity.put()
+            self.redirect("/namespace/view/%s" % (entity.key()))
+        else:
+            self.generate("pages/namespace_create.html", {"form": form}) 
+
+
 class NamespaceListHandler(BaseRequestHandler):
 
     def get(self):   
 
-        query = db.GqlQuery("SELECT * FROM Namespace WHERE owner = :1", users.get_current_user())
-        namespaces = query.fetch(1000)
+        namespaces = memcache.get("namespace_list")
+        if not namespaces:
+            query = db.GqlQuery("SELECT * FROM Namespace WHERE owner = :1", users.get_current_user())
+            namespaces = query.fetch(1000)
+            memcache.set("namespace_list", namespaces, (60*1))
+
         paginate_by = 10
         paginator = ObjectPaginator(namespaces, paginate_by) 
 
@@ -234,45 +256,34 @@ class NamespaceListHandler(BaseRequestHandler):
         self.generate("pages/namespace_list.html", options)
 
 
-class NamespaceCreateHandler(BaseRequestHandler):
-
-    def get(self):   
-
-        form = NamespaceCreateForm()
-        options = {"form": form}
-        self.generate("pages/namespace_create.html", options)
-
-    def post(self):
-
-        form = NamespaceCreateForm(data=self.request.POST)
-
-        if form.is_valid():
-            entity = form.save(commit=False)
-            entity.owner = users.get_current_user()
-            entity.auth_key = entity.generate_auth_key()
-            entity.put()
-            self.redirect("/namespace/view/%s" % (entity.key()))
-        else:
-            self.generate("pages/namespace_create.html", {"form": form}) 
-    
-
 class NamespaceViewHandler(BaseRequestHandler):
 
     def get(self, key):   
 
-        namespace = db.get(key)
+        namespace = memcache.get("namespace_item_%s" % (key))
+        if not namespace:
+            namespace = db.get(key)
+            memcache.set("namespace_item_%s" % (key), namespace, (60*60))
+       
         owner = (namespace.owner == users.get_current_user())
 
         options = {"namespace": namespace, "owner": owner}
         self.generate("pages/namespace_view.html", options)
 
 
+# Message Handlers
+
+
 class MessageListHandler(BaseRequestHandler):
 
     def get(self):   
 
-        query = db.GqlQuery("SELECT * FROM Message WHERE namespace_owner = :1 ORDER BY created DESC", users.get_current_user())
-        messages = query.fetch(1000)
+        messages = memcache.get("message_list")
+        if not messages:
+            query = db.GqlQuery("SELECT * FROM Message WHERE namespace_owner = :1 ORDER BY created DESC", users.get_current_user())
+            messages = query.fetch(1000)
+            memcache.set("message_list", messages, (30*1))
+
         paginate_by = 10
         paginator = ObjectPaginator(messages, paginate_by) 
 
@@ -297,60 +308,56 @@ class MessageListHandler(BaseRequestHandler):
         self.generate("pages/message_list.html", options)
 
 
-class MessageCreateHandler(BaseRequestHandler):
-
-    def get(self):   
-
-        form = MessageCreateForm()
-        options = {"form": form}
-        self.generate("pages/message_create.html", options)
-
-    def post(self):
-
-        form = MessageCreateForm(data=self.request.POST)
-
-        if form.is_valid():
-            entity = form.save(commit=False)
-            entity.namespace_owner = entity.namespace.owner
-            entity.put()
-            self.redirect("/message/view/%s" % (entity.key()))
-        else:
-            self.generate("pages/message_create.html", {"form": form}) 
-
 
 class MessageRestFindHandler(BaseRequestHandler):
 
-    def get(self, namespace, auth_key, name, level, minutes):
+    def get(self, namespace_name, auth_key, name, level, minutes, record_limit):
 
         try:
             minutes = int(minutes)
+            earliest_datestamp = datetime.datetime.now() - datetime.timedelta(minutes=int(minutes))
         except ValueError:
-            minutes = 60
+            minutes = "%2A"
+
+        try:
+            record_limit = int(record_limit)
+        except ValueError:
+            record_limit = 100
+
+        if record_limit < 0: record_limit = 100
+        if record_limit > 500: record_limit = 500
         
         level = level.lower()
 
         if level not in ["debug", "info", "warn", "error", "fatal", "*"]:
             level = "%2A"
 
-        earliest_datestamp = datetime.datetime.now() - datetime.timedelta(minutes=int(minutes))
+        cache_key = "message_list_%s_%s_%s_%s_%s" % (namespace_name, name, level, minutes, record_limit)
 
         errors = []
         messages = []
-        query = db.GqlQuery("SELECT * FROM Namespace WHERE name = :1", namespace)
-        namespace = query.get()
+        
+        namespace = memcache.get("namespace_item_%s" % (namespace_name))
+        if not namespace:        
+            query = db.GqlQuery("SELECT * FROM Namespace WHERE name = :1", namespace_name)
+            namespace = query.get()
+            memcache.set("namespace_item_%s" % (namespace_name), namespace, (60*60))
 
         if namespace:
             if namespace.auth_key == auth_key:
-                query = db.Query(Message)
-                query.filter("namespace =", namespace.key())
-                if name != "%2A":
-                    query.filter("name =", name)
-                if level != "%2A":
-                    query.filter("level =", LEVELS[level])
-                if minutes > 0:
-                    query.filter("created >=", earliest_datestamp)
-                query.order("-created")
-                messages = query.fetch(1000)
+                messages = memcache.get(cache_key)
+                if not messages:
+                    query = db.Query(Message)
+                    query.filter("namespace =", namespace.key())
+                    if name != "%2A":
+                        query.filter("name =", name)
+                    if level != "%2A":
+                        query.filter("level =", LEVELS[level])
+                    if minutes != "%2A":
+                        query.filter("created >=", earliest_datestamp)
+                    query.order("-created")
+                    messages = query.fetch(record_limit)
+                    memcache.set(cache_key, messages, (60*1))
             else:
                 errors.append("Namespace: not authorised")
         else:           
@@ -405,19 +412,24 @@ class MessageRestCreateHandler(BaseRequestHandler):
             errors.append("Body: not specified")
 
         success = (len(errors) == 0)
-
+        message_key = None
+        
         if success:
             message = Message(namespace=namespace, namespace_owner=namespace_owner, name=name, level=level_int, auth_key=auth_key, body=body)
             message.put()
+            message_key = message.key()
 
-        self.generate("rest/message_create.xml", {"success": success, "errors": errors}) 
+        self.generate("rest/message_create.xml", {"success": success, "errors": errors, "key": message_key}) 
 
 
 class MessageViewHandler(BaseRequestHandler):
 
     def get(self, key):   
 
-        message = db.get(key)
+        message = memcache.get("message_item_%s" % (key))
+        if not message:
+            message = db.get(key)
+            memcache.set("message_item_%s" % (key), message, (60*60))
 
         options = {"message": message}
         self.generate("pages/message_view.html", options)
@@ -432,8 +444,7 @@ url_map = [
     (r'/namespace/create', NamespaceCreateHandler),
     (r'/message/list', MessageListHandler),
     (r'/message/view/(.*)', MessageViewHandler),
-    (r'/message/create', MessageCreateHandler),
-    (r'/rest/message/find/(.*)/(.*)/(.*)/(.*)/(.*)', MessageRestFindHandler),
+    (r'/rest/message/find/(.*)/(.*)/(.*)/(.*)/(.*)/(.*)', MessageRestFindHandler),
     (r'/rest/message/create', MessageRestCreateHandler),
     (r'/(.*)', PageHandler),
 ]

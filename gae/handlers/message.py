@@ -4,7 +4,9 @@ from google.appengine.api import users
 from google.appengine.ext.webapp.util import login_required
 
 from django.core.paginator import ObjectPaginator, InvalidPage
+from django.utils import simplejson 
 
+import dao
 from models import Message
 from handlers.base import BaseRequestHandler
 
@@ -21,35 +23,24 @@ class MessageListHandler(BaseRequestHandler):
     @login_required
     def get(self):   
 
-        messages = memcache.get("message_list")
-        if not messages:
-            query = db.GqlQuery("SELECT * FROM Message WHERE namespace_owner = :1 ORDER BY created DESC", users.get_current_user())
-            messages = query.fetch(1000)
-            memcache.set("message_list", messages, (30*1))
+        page = self.request.get("page", 0)
 
-        paginate_by = 10
-        paginator = ObjectPaginator(messages, paginate_by) 
-
-        try:
-            page = int(self.request.get("page", 0))
-            items = paginator.get_page(page)
-        except InvalidPage:
-            raise http.Http404     
-
-        options = {
-            "items": items,
-            "is_paginated": True,
-            "results_per_page" : paginate_by,
-            "has_next": paginator.has_next_page(page),
-            "has_previous": paginator.has_previous_page(page),
-            "page": page + 1,
-            "next": page + 1,
-            "previous": page - 1,
-            "pages": paginator.pages,
-        }
+        options = dao.listMessages(page=page) 
 
         self.generate("pages/message_list.html", options)
 
+
+class MessageAjaxLatestHandler(BaseRequestHandler):
+    
+    @login_required
+    def get(self):
+
+        latest = memcache.get("message_latest_%s" % (users.get_current_user()))
+
+        output = simplejson.dumps(latest)
+
+        options = {"output": output}
+        self.generate("ajax/message.json", options)
 
 
 class MessageRestFindHandler(BaseRequestHandler):
@@ -161,7 +152,8 @@ class MessageRestCreateHandler(BaseRequestHandler):
         if success:
             message = Message(namespace=namespace, namespace_owner=namespace_owner, name=name, level=level_int, auth_key=auth_key, body=body)
             message.put()
-            message_key = message.key()
+            message_key = str(message.key())
+        memcache.set("message_latest_%s" % (namespace_owner), {"key": message_key, "namespace": namespace.name, "name": message.name, "level": message.level_string().upper(), "body": message.body, "created": message.created.strftime("%Y-%m-%d %H:%M:%S")})
 
         self.generate("rest/message_create.xml", {"success": success, "errors": errors, "key": message_key}) 
 
@@ -171,10 +163,7 @@ class MessageViewHandler(BaseRequestHandler):
     @login_required
     def get(self, key):   
 
-        message = memcache.get("message_item_%s" % (key))
-        if not message:
-            message = db.get(key)
-            memcache.set("message_item_%s" % (key), message, (60*60))
+        message = dao.getMessage(key)
 
         options = {"message": message}
         self.generate("pages/message_view.html", options)

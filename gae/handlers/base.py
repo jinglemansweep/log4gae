@@ -13,8 +13,10 @@ class BaseRequestHandler(webapp.RequestHandler):
     _OUTPUT_TYPES = {
         "html": "text/html",
         "xml": "text/xml",
-        "json": "application/json",
+        "json": "text/plain",
     }
+
+    # "json": "application/json",
     
     def generate(self, template_name, template_values={}):
 

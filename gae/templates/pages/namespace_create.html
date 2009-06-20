@@ -2,13 +2,15 @@
 
 {% block body %}
 
-    <h2>Create New Namespace...</h2>
+    <h2>Create Your Namespace</h2>
+    <p>Simply choose a name for your namespace, and enter it below. Sample namespace names include "com.appspot.log4gae" or "com.gmail.somebody", however, any piece of text can be used.</p>
     <form id="form_namespace" action="" method="post" class="form">
         <label for="id_name">Name:</label><br/>
         {{ form.name }}<br/>       
         {{ form.name.errors }}
-        <hr/>
-        <input type="submit" value="Save" /><br/>
+        <br/>
+        <input type="submit" value="Save" />
+        <br/>
     </form>
 
 {% endblock %}

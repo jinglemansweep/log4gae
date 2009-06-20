@@ -21,6 +21,7 @@ url_map = [
     (r"/message/view/(.*)", MessageViewHandler),
     (r"/rest/message/find/(.*)/(.*)/(.*)/(.*)/(.*)/(.*)", MessageRestFindHandler),
     (r"/rest/message/create", MessageRestCreateHandler),
+    (r"/ajax/message/latest", MessageAjaxLatestHandler),
     (r"/(.*)", PageHandler),
 ]
 

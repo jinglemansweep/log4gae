@@ -24,6 +24,7 @@ class MessageListHandler(BaseRequestHandler):
     def get(self):   
 
         page = self.request.get("page", 0)
+        page = int(page)
 
         options = dao.listMessages(page=page) 
 

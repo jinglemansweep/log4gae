@@ -76,11 +76,11 @@ def getMessage(key):
 
 def listMessages(page=0, page_size=10):
 
-    messages = memcache.get("message_list")
+    messages = memcache.get("message_list_%s" % (users.get_current_user()))
     if not messages:
         query = db.GqlQuery("SELECT * FROM Message WHERE namespace_owner = :1 ORDER BY created DESC", users.get_current_user())
         messages = query.fetch((page_size * 10))
-        memcache.set("message_list", messages, (60*1))
+        memcache.set("message_list_%s" % (users.get_current_user()), messages, (60*1))
 
     paginator = ObjectPaginator(messages, page_size) 
 

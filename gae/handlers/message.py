@@ -171,5 +171,7 @@ class MessageViewHandler(BaseRequestHandler):
 
         message = dao.getMessage(key)
 
-        options = {"message": message}
+        owner = (message.namespace_owner == users.get_current_user())
+
+        options = {"message": message, "owner": owner}
         self.generate("pages/message_view.html", options)

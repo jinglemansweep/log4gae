@@ -10,11 +10,11 @@
                 <th>Name</th>
                 <td>{{ namespace.name }}</td>
             </tr>
-            <tr>
-                <th>Owner</th>
-                <td>{{ namespace.owner }}</td>
-            </tr>
-            {% if owner %}
+            {% if owner %}            
+                <tr>
+                    <th>Owner</th>
+                    <td>{{ namespace.owner }}</td>
+                </tr>            
                 <tr>
                     <th>Authorisation Key</th>
                     <td>{{ namespace.auth_key }}<br/><a href="/namespace/auth_reset/{{ namespace.key }}">Reset Key</a></td>

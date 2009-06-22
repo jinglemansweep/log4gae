@@ -3,35 +3,40 @@
 {% block body %}
 
     <h2>View Message</h2>
-    <p>The message details are displayed below:</p>
-    <table class="detailviewer">
-        <tbody>
-            <tr>
-                <th>Namespace</th>
-                <td><a href="/namespace/view/{{ message.namespace.key }}">{{ message.namespace }}</a></td>
-            </tr>
-            <tr>
-                <th>Name</th>
-                <td>{{ message.name }}</td>
-            </tr>
-            <tr>
-                <th>Level</th>
-                <td>{{ message.level_string|upper }}</td>
-            </tr>
-            <tr>
-                <th>Body</th>
-                <td>{{ message.body }}</td>
-            </tr>
-            <tr>
-                <th>Created</th>
-                <td>{{ message.created|date:"d M Y H:i:s" }}</td>
-            </tr>
-            <tr>
-                <th>Modified</th>
-                <td>{{ message.modified|date:"d M Y H:i:s" }}</td>
-            </tr>
-        </tbody>
-    </table>
+
+    {% if owner %}
+        <p>The message details are displayed below:</p>
+        <table class="detailviewer">
+            <tbody>
+                <tr>
+                    <th>Namespace</th>
+                    <td><a href="/namespace/view/{{ message.namespace.key }}">{{ message.namespace }}</a></td>
+                </tr>
+                <tr>
+                    <th>Name</th>
+                    <td>{{ message.name }}</td>
+                </tr>
+                <tr>
+                    <th>Level</th>
+                    <td>{{ message.level_string|upper }}</td>
+                </tr>
+                <tr>
+                    <th>Body</th>
+                    <td>{{ message.body }}</td>
+                </tr>
+                <tr>
+                    <th>Created</th>
+                    <td>{{ message.created|date:"d M Y H:i:s" }}</td>
+                </tr>
+                <tr>
+                    <th>Modified</th>
+                    <td>{{ message.modified|date:"d M Y H:i:s" }}</td>
+                </tr>
+            </tbody>
+        </table>
+    {% else %}
+        <p>You are not authorised to view this message.</p>
+    {% endif %}
 
 {% endblock %}
 

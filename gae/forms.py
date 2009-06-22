@@ -1,11 +1,12 @@
+
 from google.appengine.ext import db
 from google.appengine.ext.db import djangoforms
 
 from models import Namespace, Message
 
-
 class BaseForm(djangoforms.ModelForm):
     pass
+
 
 
 class NamespaceCreateForm(BaseForm):

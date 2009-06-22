@@ -1,3 +1,5 @@
+import datetime
+
 from google.appengine.ext import db
 from google.appengine.api import memcache
 from google.appengine.api import users
@@ -77,9 +79,9 @@ class MessageRestFindHandler(BaseRequestHandler):
         if not namespace:        
             query = db.GqlQuery("SELECT * FROM Namespace WHERE name = :1", namespace_name)
             namespace = query.get()
-            memcache.set("namespace_item_%s" % (namespace.key()), namespace, (60*60))
 
         if namespace:
+            memcache.set("namespace_item_%s" % (namespace.key()), namespace, (60*60))
             if namespace.auth_key == auth_key:
                 messages = memcache.get(cache_key)
                 if not messages:

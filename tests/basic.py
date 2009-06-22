@@ -5,13 +5,17 @@ import unittest
 import urllib
 import urllib2
 
-URL="http://localhost:8080"
+TEST_URL="http://localhost:8080"
+LIVE_URL="http://log4gae.appspot.com"
 
-NAMESPACE = "test"
-AUTH_KEY = "apNlkM0Twuipyn21cmdJU8xWYnOIKBgzQnk8shVwV3X4VOHq4ynLOx4pCivOpmQl"
+URL = LIVE_URL
+
+NAMESPACE = "com.appspot.log4gae.unittests"
+AUTH_KEY = "37C8UhvVW6HHwHIAgXmmcQQICxMhs11NwUpSPkQaac2f7S0Mndq3iF5rT0IcKPQh"
 NAME = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 LEVEL = "info"
 
+MESSAGE_COUNT = 5
 
 class TestRestService(unittest.TestCase):
 
@@ -94,7 +98,7 @@ class TestRestService(unittest.TestCase):
         url = "%s/rest/message/create" % (URL)
         params = {"namespace": NAMESPACE, "auth_key": AUTH_KEY, "name": NAME}
 
-        for i in range(1, 25):
+        for i in range(1, MESSAGE_COUNT):
             params["level"] = "debug"
             params["body"] = "Message %i" % (i)
             response = self.http(url, params)
@@ -104,7 +108,7 @@ class TestRestService(unittest.TestCase):
         url = "%s/rest/message/create" % (URL)
         params = {"namespace": NAMESPACE, "auth_key": AUTH_KEY, "name": NAME}
 
-        for i in range(1, 25):
+        for i in range(1, MESSAGE_COUNT):
             params["level"] = "info"
             params["body"] = "Message %i" % (i)
             response = self.http(url, params)

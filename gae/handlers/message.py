@@ -119,12 +119,21 @@ class MessageRestCreateHandler(BaseRequestHandler):
                 errors.append("Namespace: not found")
             else:
                 namespace_owner = namespace.owner
+            if "auth_key" in post:
+                auth_key = post["auth_key"]
+                if namespace:
+                    if auth_key != namespace.auth_key:
+                        errors.append("AuthKey: not authorised")
+            else:
+                errors.append("AuthKey: not specified")
         else:
             errors.append("Namespace: not specified")
 
         if "name" in post:
-            name = post["name"].lower()
+            name = str(post["name"].lower())
             name = name[:100]
+            if len(name) < 4:
+                errors.append("Name: too short")
         else:
             errors.append("Name: not specified")
 
@@ -136,16 +145,10 @@ class MessageRestCreateHandler(BaseRequestHandler):
         else:
             errors.append("Level: not specified")
 
-        if "auth_key" in post:
-            auth_key = post["auth_key"]
-            if namespace:
-                if auth_key != namespace.auth_key:
-                    errors.append("AuthKey: not authorised")
-        else:
-            errors.append("AuthKey: not specified")
-
         if "body" in post:
-            body = post["body"]
+            body = str(post["body"])
+            if len(body) < 1:
+                errors.append("Body: too short")
         else:
             errors.append("Body: not specified")
 
@@ -156,7 +159,7 @@ class MessageRestCreateHandler(BaseRequestHandler):
             message = Message(namespace=namespace, namespace_owner=namespace_owner, name=name, level=level_int, auth_key=auth_key, body=body)
             message.put()
             message_key = str(message.key())
-        memcache.set("message_latest_%s" % (namespace_owner), {"key": message_key, "namespace": namespace.name, "name": message.name, "level": message.level_string().upper(), "body": message.body, "created": message.created.strftime("%Y-%m-%d %H:%M:%S")})
+            memcache.set("message_latest_%s" % (namespace_owner), {"key": message_key, "namespace": namespace.name, "name": message.name, "level": message.level_string().upper(), "body": message.body, "created": message.created.strftime("%Y-%m-%d %H:%M:%S")})
 
         self.generate("rest/message_create.xml", {"success": success, "errors": errors, "key": message_key}) 
 

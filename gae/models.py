@@ -29,7 +29,7 @@ class Message(db.Model):
     auth_key = db.StringProperty(required=True)
     created = db.DateTimeProperty(auto_now_add=True)
     modified = db.DateTimeProperty(auto_now=True)
-
+       
     def level_string(self):
         if self.level == 10: return "debug"
         if self.level == 20: return "info"

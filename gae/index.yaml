@@ -37,7 +37,7 @@ indexes:
 # automatically uploaded to the admin console when you next deploy
 # your application using appcfg.py.
 
-# Unused in query history -- copied from input.
+# Used 11 times in query history.
 - kind: Message
   properties:
   - name: level
@@ -52,7 +52,7 @@ indexes:
   - name: namespace
   - name: created
 
-# Unused in query history -- copied from input.
+# Used 2 times in query history.
 - kind: Message
   properties:
   - name: name

@@ -9,6 +9,7 @@ from django.core.paginator import ObjectPaginator, InvalidPage
 from django.utils import simplejson 
 
 import dao
+from utils import *
 from models import Message
 from handlers.base import BaseRequestHandler
 
@@ -46,62 +47,92 @@ class MessageAjaxLatestHandler(BaseRequestHandler):
         self.generate("ajax/message.json", options)
 
 
-class MessageRestFindHandler(BaseRequestHandler):
+class MessageRestHandler(BaseRequestHandler):
 
+    def get(self, method):
 
-    def get(self, namespace_name, auth_key, name, level, minutes, record_limit):
+        errors = list()
+        messages = list()
+        params = dict()
+        include_list = False
+
+        mandatory_params = ["namespace", "auth_key",]
+
+        if method not in ["find", "count",]:
+            errors.append("Invalid method: %s" % (method))
+
+        params["namespace"] = self.request.get("namespace")
+        params["auth_key"] = self.request.get("auth_key")
+        params["name"] = self.request.get("name")
+        params["level"] = self.request.get("level")
+        params["minutes"] = self.request.get("minutes", 0)
+        params["records"] = self.request.get("records", 1000)
+
+        # Validation
+
+        if method == "find":
+            include_list = True
+        if method == "count":
+            include_list = False
+
+        for mandatory_param in mandatory_params:
+            if not params.get(mandatory_param):
+                errors.append("Missing parameter: %s" % (mandatory_param))
+               
+        try:
+            params["minutes"] = int(params["minutes"])
+        except TypeError:
+            errors.append("Invalid parameter value for '%s': %i" % ("minutes", params["minutes"]))
 
         try:
-            minutes = int(minutes)
-            earliest_datestamp = datetime.datetime.now() - datetime.timedelta(minutes=int(minutes))
-        except ValueError:
-            minutes = "%2A"
+            params["records"] = int(params["records"])
+        except TypeError:
+            errors.append("Invalid parameter value for '%s': %i" % ("records", params["records"]))
 
-        try:
-            record_limit = int(record_limit)
-        except ValueError:
-            record_limit = 100
+        if params["level"]:
+            params["level"] = params["level"].lower()
+            params["level_int"] = level_string_to_number(params["level"])
 
-        if record_limit < 0: record_limit = 100
-        if record_limit > 500: record_limit = 500
-        
-        level = level.lower()
+        cache_key = "message_list_%s_%s_%s_%s_%s" % (params["namespace"], params["name"], params["level"], params["minutes"], params["records"])
 
-        if level not in ["debug", "info", "warn", "error", "fatal", "*"]:
-            level = "%2A"
+        # Query
 
-        cache_key = "message_list_%s_%s_%s_%s_%s" % (namespace_name, name, level, minutes, record_limit)
+        earliest_datestamp = datetime.datetime.now() - datetime.timedelta(minutes=int(params["minutes"]))
 
-        errors = []
-        messages = []
-        
-        namespace = memcache.get("namespace_item_%s" % (namespace_name))
-        if not namespace:        
-            query = db.GqlQuery("SELECT * FROM Namespace WHERE name = :1", namespace_name)
-            namespace = query.get()
+        if len(errors) == 0:
 
-        if namespace:
-            memcache.set("namespace_item_%s" % (namespace.key()), namespace, (60*60))
-            if namespace.auth_key == auth_key:
-                messages = memcache.get(cache_key)
-                if not messages:
-                    query = db.Query(Message)
-                    query.filter("namespace =", namespace.key())
-                    if name != "%2A":
-                        query.filter("name =", name)
-                    if level != "%2A":
-                        query.filter("level =", LEVELS[level])
-                    if minutes != "%2A":
-                        query.filter("created >=", earliest_datestamp)
-                    query.order("-created")
-                    messages = query.fetch(record_limit)
-                    memcache.set(cache_key, messages, (60*1))
+            # Get Namespace
+
+            cache_namespace = memcache.get("namespace_item_%s" % (params["namespace"]))
+
+            if not cache_namespace:        
+                query = db.GqlQuery("SELECT * FROM Namespace WHERE name = :1", params["namespace"])
+                namespace = query.get()
+
+            if namespace:
+                memcache.set("namespace_item_%s" % (namespace.key()), namespace, (60*60))
+                if namespace.auth_key == params["auth_key"]:
+                    messages = memcache.get(cache_key)
+                    if not messages:
+                        query = db.Query(Message)
+                        query.filter("namespace =", namespace.key())
+                        if params["name"]:
+                            query.filter("name =", params["name"])
+                        if params["level"]:
+                            query.filter("level =", params["level_int"])
+                        if params["minutes"] > 0:
+                            query.filter("created >=", earliest_datestamp)
+                        query.order("-created")               
+                        messages = query.fetch(params["records"])
+                        memcache.set(cache_key, messages, (60*1))
+                else:
+                    errors.append("Invalid namespace authentication")
             else:
-                errors.append("Namespace: not authorised")
-        else:           
-            errors.append("Namespace: not found")
+                errors.append("Namespace not found")
 
-        self.generate("rest/message_list.xml", {"messages": messages}) 
+        # Render
+
+        self.generate("rest/message_list.xml", {"include_list": include_list, "messages": messages, "errors": errors}) 
 
 
 class MessageRestCreateHandler(BaseRequestHandler):
@@ -141,7 +172,7 @@ class MessageRestCreateHandler(BaseRequestHandler):
             level = post["level"]
             if level not in ["debug", "info", "warn", "error", "fatal"]:
                 level = "info"
-            level_int = LEVELS[level]
+            level_int = level_string_to_number(level)
         else:
             errors.append("Level: not specified")
 

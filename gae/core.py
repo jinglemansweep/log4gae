@@ -19,9 +19,9 @@ url_map = [
     (r"/namespace/auth_reset/(.*)", NamespaceAuthResetHandler),
     (r"/message/list", MessageListHandler),
     (r"/message/view/(.*)", MessageViewHandler),
-    (r"/rest/message/find/(.*)/(.*)/(.*)/(.*)/(.*)/(.*)", MessageRestFindHandler),
     (r"/rest/message/create", MessageRestCreateHandler),
     (r"/ajax/message/latest", MessageAjaxLatestHandler),
+    (r"/rest/message/(.*)", MessageRestHandler),
     (r"/(.*)", PageHandler),
 ]
 

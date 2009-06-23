@@ -1,1 +1,16 @@
-{% spaceless %}<log4gae><messages count="{{ messages|length }}">{% for message in messages %}<message key="{{ message.key }}" namespace="{{ message.namespace }}" name="{{ message.name }}" level="{{ message.level_string|upper }}" created="{{ message.created|date:"Y-m-d\TH:i:s" }}" updated="{{ message.modified|date:"Y-m-d\TH:i:s" }}">{{ message.body }}</message>{% endfor %}</messages></log4gae>{% endspaceless %}
+{% spaceless %}
+<log4gae>
+    <messages count="{{ messages|length }}">
+        {% if include_list %}        
+            {% for message in messages %}
+                <message key="{{ message.key }}" namespace="{{ message.namespace }}" name="{{ message.name }}" level="{{ message.level_string|upper }}" created="{{ message.created|date:"Y-m-d\TH:i:s" }}" updated="{{ message.modified|date:"Y-m-d\TH:i:s" }}">{{ message.body }}</message>
+            {% endfor %}
+        {% endif %}
+    </messages>
+    <errors count="{{ errors|length }}">
+        {% for error in errors %}
+            <error>{{ error }}</error>
+        {% endfor %}
+    </errors>
+</log4gae>
+{% endspaceless %}

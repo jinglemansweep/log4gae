@@ -1,0 +1,81 @@
+#!/usr/bin/env python
+
+
+from optparse import OptionParser
+from datetime import datetime
+from xml.dom import minidom
+
+import sys
+import urllib
+import urllib2
+
+DEFAULT_HOST = "log4gae.appspot.com"
+
+STATUS_OK = 0
+STATUS_WARNING = 1
+STATUS_CRITICAL = 2
+STATUS_UNKNOWN = 3
+
+rc = STATUS_OK
+
+parser = OptionParser()
+parser.add_option("-s", "--namespace", dest="namespace", help="Specify namespace to use")
+parser.add_option("-a", "--auth-key", dest="auth_key", help="Specify authorisation key to use")
+parser.add_option("-n", "--name", dest="name", help="Specify name to use")
+parser.add_option("-l", "--level", dest="level", help="Specify level to use")
+parser.add_option("-m", "--minutes", dest="minutes", help="Specify number of minutes of log history to include")
+parser.add_option("-r", "--records", dest="records", help="Specify number of records to return")
+parser.add_option("-d", "--host", dest="host", default=DEFAULT_HOST, help="Specify Log4GAE host to use")
+
+(options, args) = parser.parse_args()
+
+find_url = "http://%s/rest/message/find" % (options.host)
+
+error_count = 0
+errors = []
+
+if not options.namespace:
+    errors.append("Namespace missing")
+    error_count = error_count + 1
+if not options.auth_key:
+    errors.append("AuthKey missing")
+    error_count = error_count + 1
+
+if error_count > 0:
+    rc = STATUS_CRITICAL
+    print ", ".join(errors)
+    sys.exit(rc)
+
+
+# HTTP
+
+call_url = "%s?namespace=%s&auth_key=%s" % (find_url, options.namespace, options.auth_key)
+if options.name:
+    call_url = call_url + "&name=%s" % (options.name)
+if options.level:
+    call_url = call_url + "&level=%s" % (options.level)
+if options.minutes:
+    call_url = call_url + "&minutes=%s" % (str(options.minutes))
+if options.records:
+    call_url = call_url + "&records=%s" % (str(options.records))
+
+request = urllib2.Request(call_url)
+response = urllib2.urlopen(request)
+xml = response.read()
+dom = minidom.parseString(xml)
+
+root = dom.getElementsByTagName("log4gae")[0]
+messages_node = root.getElementsByTagName("messages")[0]
+messages = messages_node.getElementsByTagName("message")
+message_count = len(messages)
+heartbeat_alive = (message_count > 0)
+
+if heartbeat_alive:
+    print "Log4GAE Heartbeat OK"
+else:
+    print "Log4GAE Heartbeat Lost"
+    rc = STATUS_CRITICAL
+
+sys.exit(rc)
+
+

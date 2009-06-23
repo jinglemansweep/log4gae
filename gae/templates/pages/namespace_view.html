@@ -22,7 +22,10 @@
                 <tr>
                     <th>REST API</th>
                     <td>
-                        <a href="/rest/message/find/{{ namespace.name }}/{{ namespace.auth_key }}/*/*/*/*" target="_blank">Find All Messages</a><br/>
+                        <a href="/rest/message/find?namespace={{ namespace.name }}&auth_key={{ namespace.auth_key }}" target="_blank">All messages</a><br/>
+                        <a href="/rest/message/find?namespace={{ namespace.name }}&auth_key={{ namespace.auth_key }}&level=info" target="_blank">All INFO messages</a><br/>
+                        <a href="/rest/message/find?namespace={{ namespace.name }}&auth_key={{ namespace.auth_key }}&level=warn&records=3" target="_blank">Last 3 WARN messages</a><br/>     
+                        <a href="/rest/message/find?namespace={{ namespace.name }}&auth_key={{ namespace.auth_key }}&minutes=60" target="_blank">All messages within last 60 minutes</a><br/>     
                     </td>
                 </tr>
             {% endif %}
